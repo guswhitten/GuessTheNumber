@@ -1,19 +1,40 @@
 ﻿using System;
+using System.Drawing;
+using System.Runtime.InteropServices;
+using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Attributes;
+using MongoDB.Bson.Serialization.Serializers;
+using MongoDB.Driver;
 
-namespace NumberGuesser
-{
-    class Program
-    {
-        static void Main(string[] args)
-        {
+namespace NumberGuesser {
+    class Program {
+        static void Main(string[] args) {
+
+            // Mongo collection details
+            var client = new MongoClient("mongodb://127.0.0.1:27017");
+            var db = client.GetDatabase("number_guesser_db");
+            var collection = db.GetCollection<PlayerModel>("players");
+
             // print introductory lines to console
-            WriteLineInColor("Number Guesser v1.0.0 by Whitten Oswald", ConsoleColor.Yellow);
-            Console.Write("What is your name? : ");
-            Console.WriteLine("Hello {0}, let's play a game...", Console.ReadLine());
+            WriteLineInColor("Number Guesser v1.0.1 by Whitten Oswald", ConsoleColor.Yellow);
+            Console.Write("\nWhat is your name?  ");
 
-            // initialize variables that will be consistent thru all rounds
+            // check whether this player has played before
+            string name = Console.ReadLine();
+            BsonDocument player = FindAPlayer(collection, name);
+            if (player == null)
+            {
+                collection.InsertOne(new PlayerModel { Name = name, Correct = 0, Attempts = 0, Accuracy = 0.0 });
+                player = FindAPlayer(collection, name);
+                Console.WriteLine($"Nice to meet you {name}, I want to play a game...");
+            }
+            else
+            {
+                Console.WriteLine($"\nWelcome back {name}!\n\nStats:");
+                PrintStats(player);
+            }
+
             int correct = 0, attempts = 0;
-
             while (true) {
                 // initialize variables that will reset after each round
                 Random random = new Random();
@@ -32,31 +53,64 @@ namespace NumberGuesser
 
                     // check whether guess is correct
                     guess = Int32.Parse(input);
-                    if (guess != correctNumber) {
-                        WriteLineInColor("Wrong number. Guess again", ConsoleColor.Red);
-                    }
+                    if (guess != correctNumber) { WriteLineInColor("Wrong number. Guess again", ConsoleColor.Red); }
                 }
+                // loop ends when player has guessed correctly
                 correct++;
                 WriteLineInColor("CORRECT!!", ConsoleColor.DarkYellow);
                 Console.WriteLine("Play again? [Y / N]");
-                string answer = Console.ReadLine().ToUpper();
-                if (answer == "Y") {
-                    continue;
-                }
+                if (Console.ReadLine().ToUpper() == "Y") { continue; }
                 else {
-                    // calculate and print accuracy over all games played
-                    WriteLineInColor("Game over", ConsoleColor.Red);
-                    double percent = (double)correct / attempts;
-                    Console.WriteLine("Your Accuracy ==> {0} / {1} = {2}%", correct, attempts, percent);
+                    WriteLineInColor("GAME OVER", ConsoleColor.Red);
+                    // calculate new stats
+                    double session_accuracy = ((double)correct / attempts) * 100;
+                    correct += player["Correct"].ToInt32(); attempts += player["Attempts"].ToInt32();
+                    double new_accuracy = ((double)correct / attempts) * 100;
+
+                    // update player's stats in mongo
+                    var filter = Builders<PlayerModel>.Filter.Eq("Name", name);
+                    var update = Builders<PlayerModel>.Update.Set("Correct", correct).Set("Attempts", attempts).Set("Accuracy", new_accuracy);
+                    collection.FindOneAndUpdate(filter, update);
+
+                    PrintAccuracyResults(player["Accuracy"].ToDouble(), session_accuracy, new_accuracy);
                     return;
                 }
             }
         }
 
-        static void WriteLineInColor(string line, ConsoleColor color)
-        {
+        static void WriteLineInColor(string line, ConsoleColor color) {
             Console.ForegroundColor = color;
             Console.WriteLine(line);
+            Console.ResetColor();
+        }
+
+        private static BsonDocument FindAPlayer(IMongoCollection<PlayerModel> collection, string name)
+        {
+            var mongo_query = Builders<PlayerModel>.Filter
+                .Eq(pm => pm.Name, name);
+
+            var player = collection.Find(mongo_query).FirstOrDefault().ToBsonDocument();
+
+            return player;
+        }
+
+        private static void PrintStats(BsonDocument player)
+        {
+            Console.WriteLine(
+                "\tCorrect\t\tTotal\t\tAccuracy\n" +
+                $"\t  {player["Correct"]} \t\t {player["Attempts"]} \t\t  {player["Accuracy"].ToDouble().ToString("0.#")}%\n"
+                );
+        }
+
+        private static void PrintAccuracyResults(double old_accuracy, double session_accuracy, double new_accuracy)
+        {
+            Console.WriteLine("Here are your results:");
+            Console.Write(
+                "\tSession\t\tSuccess\t\t+/-\n" +
+                $"\t  {session_accuracy.ToString("0.##")}%\t\t {new_accuracy.ToString("0.##")}%\t\t"
+                );
+            Console.ForegroundColor = new_accuracy > old_accuracy ? ConsoleColor.Green : ConsoleColor.Red;
+            Console.Write($"{(new_accuracy-old_accuracy).ToString("0.##")}%\n");
             Console.ResetColor();
         }
     }
