@@ -11,5 +11,5 @@ Steps to use locally:
 - In addition, you'll need the Mongo extension for Visual Studio. In the Solution Explorer view:
 	- Right click on 'Dependencies' -> 'Manage NuGet Packages...'
 	- Search MongoDB.Driver and install
-- To visualize your stats, download MongoCompass and connect to your local database at 127.0.0.1:27017
+- To visualize your stats, open MongoCompass and connect to your local database at 127.0.0.1:27017
 - Run the Program (Ctrl + F5)
