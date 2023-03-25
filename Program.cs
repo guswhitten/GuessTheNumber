@@ -30,7 +30,7 @@ namespace NumberGuesser {
             }
             else
             {
-                Console.WriteLine($"\nWelcome back {name}!\n\nStats:");
+                Console.WriteLine($"\nWelcome back {name}!\n\t\t\tSTATS:");
                 PrintStats(player);
             }
 
@@ -47,21 +47,21 @@ namespace NumberGuesser {
 
                     // error checking: ensure user's input is numerical
                     if (!int.TryParse(input, out guess)) {
-                        WriteLineInColor("Please enter a digit.", ConsoleColor.Red);
+                        WriteLineInColor("Please enter a digit.\n", ConsoleColor.DarkRed);
                         continue;
                     }
 
                     // check whether guess is correct
                     guess = Int32.Parse(input);
-                    if (guess != correctNumber) { WriteLineInColor("Wrong number. Guess again", ConsoleColor.Red); }
+                    if (guess != correctNumber) { WriteLineInColor("Wrong number. Guess again\n", ConsoleColor.DarkRed); }
                 }
                 // loop ends when player has guessed correctly
                 correct++;
-                WriteLineInColor("CORRECT!!", ConsoleColor.DarkYellow);
-                Console.WriteLine("Play again? [Y / N]");
+                WriteLineInColor("\nCORRECT!! ", ConsoleColor.Yellow);
+                Console.Write("Play again? [Y / N] ");
                 if (Console.ReadLine().ToUpper() == "Y") { continue; }
                 else {
-                    WriteLineInColor("GAME OVER", ConsoleColor.Red);
+                    WriteLineInColor("\nGAME OVER\n", ConsoleColor.Red);
                     // calculate new stats
                     double session_accuracy = ((double)correct / attempts) * 100;
                     correct += player["Correct"].ToInt32(); attempts += player["Attempts"].ToInt32();
@@ -80,15 +80,13 @@ namespace NumberGuesser {
 
         static void WriteLineInColor(string line, ConsoleColor color) {
             Console.ForegroundColor = color;
-            Console.WriteLine(line);
+            Console.Write(line);
             Console.ResetColor();
         }
 
         private static BsonDocument FindAPlayer(IMongoCollection<PlayerModel> collection, string name)
         {
-            var mongo_query = Builders<PlayerModel>.Filter
-                .Eq(pm => pm.Name, name);
-
+            var mongo_query = Builders<PlayerModel>.Filter.Eq(pm => pm.Name, name);
             var player = collection.Find(mongo_query).FirstOrDefault().ToBsonDocument();
 
             return player;
@@ -96,21 +94,14 @@ namespace NumberGuesser {
 
         private static void PrintStats(BsonDocument player)
         {
-            Console.WriteLine(
-                "\tCorrect\t\tTotal\t\tAccuracy\n" +
-                $"\t  {player["Correct"]} \t\t {player["Attempts"]} \t\t  {player["Accuracy"].ToDouble().ToString("0.#")}%\n"
-                );
+            Console.WriteLine($"\tCorrect\t\tTotal\t\tAccuracy\n\t  {player["Correct"]} \t\t {player["Attempts"]} \t\t  {player["Accuracy"].ToDouble().ToString("0.#")}%\n");
         }
 
-        private static void PrintAccuracyResults(double old_accuracy, double session_accuracy, double new_accuracy)
+        private static void PrintAccuracyResults(double old, double session, double curr)
         {
-            Console.WriteLine("Here are your results:");
-            Console.Write(
-                "\tSession\t\tSuccess\t\t+/-\n" +
-                $"\t  {session_accuracy.ToString("0.##")}%\t\t {new_accuracy.ToString("0.##")}%\t\t"
-                );
-            Console.ForegroundColor = new_accuracy > old_accuracy ? ConsoleColor.Green : ConsoleColor.Red;
-            Console.Write($"{(new_accuracy-old_accuracy).ToString("0.##")}%\n");
+            Console.Write($"\tSession\t\tAccuracy\t +/-\n\t{session.ToString("0.##")}%\t\t{curr.ToString("0.##")}%\t\t");
+            Console.ForegroundColor = curr > old ? ConsoleColor.Green : ConsoleColor.Red;
+            Console.Write($"{(curr - old).ToString("0.##")}%\n");
             Console.ResetColor();
         }
     }
