@@ -7,7 +7,7 @@ Steps to use locally:
 - Ensure your Visual Studio has at minimum the 'ASP.NET and web development' Workload installed.
 - You should also install MongoDB:
 	- https://www.mongodb.com/try/download/community
-	- https://www.mongodb.com/try/download/compass (optional)
+	- Installer will give you the option to install Compass, Mongo's GUI
 - In addition, you'll need the Mongo extension for Visual Studio. In the Solution Explorer view:
 	- Right click on 'Dependencies' -> 'Manage NuGet Packages...'
 	- Search MongoDB.Driver and install
